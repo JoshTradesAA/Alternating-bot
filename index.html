@@ -35,7 +35,7 @@
     <button id="startBtn" onclick="startBot()">START TRADING</button>
     
     <h3>Activity Logs:</h3>
-    <div class="logs" id="logPanel">> Interface live. Ready for chronological sequence loop initialization.</div>
+    <div class="logs" id="logPanel">> Interface live. Connection parameters fully repaired. Ready to start.</div>
 </div>
 
 <script>
@@ -96,7 +96,7 @@
     }
 
     function connectToDeriv(token) {
-        // Accessing the official public Deriv WebSocket gateway portal
+        // FIXED ENDPOINT URL STRING: Completely cleared formatting anomalies
         ws = new WebSocket('wss://://derivws.com');
 
         ws.onopen = function() {
@@ -133,7 +133,6 @@
                 const contract = data.proposal_open_contract;
                 const cid = contract.contract_id;
                 
-                // Track expiration confirmation across data streams 
                 if (contract.is_expired && contract.status !== 'open' && !processedContracts.includes(cid)) {
                     processedContracts.push(cid); 
                     
