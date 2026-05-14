@@ -35,15 +35,15 @@
     <button id="startBtn" onclick="startBot()">START TRADING</button>
     
     <h3>Activity Logs:</h3>
-    <div class="logs" id="logPanel">> Verified Code Base. Ready for secure deployment...</div>
+    <div class="logs" id="logPanel">> Interface live. Ready for chronological sequence loop initialization.</div>
 </div>
 
 <script>
     let ws;
     let isRunning = false;
-    let processedContracts = []; // Critical duplicate handler array
+    let processedContracts = [];
 
-    // Chronological array of 1s Volatility Indices - Fixed variable syntax
+    // All chronological 1s Volatility Indices 
     const sMarkets = [
         "1HZ10V", "1HZ15V", "1HZ25V", "1HZ30V", "1HZ50V", 
         "1HZ75V", "1HZ90V", "1HZ100V", "1HZ150V", "1HZ200V", 
@@ -51,7 +51,7 @@
     ];
     let marketIndex = 0;
 
-    // Custom Target Digit Sequence - Fixed processing code typo
+    // Fixed Target Digit Array Definition
     const predSequence = [3, 4, 5, 6, 7];
     let predIndex = 0;
 
@@ -80,8 +80,8 @@
             return;
         }
 
-        const token = document.getElementById('token').value;
-        if (!token) { addLog("ERROR: Please enter an API Token."); return; }
+        const token = document.getElementById('token').value.trim();
+        if (!token) { addLog("ERROR: Please enter a valid API Token."); return; }
 
         isRunning = true;
         marketIndex = 0;
@@ -96,7 +96,7 @@
     }
 
     function connectToDeriv(token) {
-        // Official Deriv Global WebSocket Interface Endpoint
+        // Accessing the official public Deriv WebSocket gateway portal
         ws = new WebSocket('wss://://derivws.com');
 
         ws.onopen = function() {
@@ -114,7 +114,7 @@
             }
 
             if (data.msg_type === 'authorize') {
-                addLog(`Authorized as ${data.authorize.email}. Ready to stream trades.`);
+                addLog(`Authorized as ${data.authorize.email}. Running live tracking loops...`);
                 ws.send(JSON.stringify({ forget_all: "proposal_open_contract" }));
                 ws.send(JSON.stringify({ proposal_open_contract: 1, subscribe: 1 }));
                 executeNextTradeLoop();
@@ -126,16 +126,16 @@
             }
 
             if (data.msg_type === 'buy') {
-                addLog(`Order placed successfully. Waiting for final digit validation...`);
+                addLog(`Order placed successfully on ${sMarkets[marketIndex]}. Checking results...`);
             }
 
             if (data.msg_type === 'proposal_open_contract' && data.proposal_open_contract) {
                 const contract = data.proposal_open_contract;
                 const cid = contract.contract_id;
                 
-                // Confirm contract is fully closed out AND hasn't been evaluated in this execution run yet
+                // Track expiration confirmation across data streams 
                 if (contract.is_expired && contract.status !== 'open' && !processedContracts.includes(cid)) {
-                    processedContracts.push(cid); // Mark Contract Handled
+                    processedContracts.push(cid); 
                     
                     const winAmount = parseFloat(contract.profit);
                     totalProfit += winAmount;
@@ -169,7 +169,6 @@
         
         addLog(`Sending Proposal -> <b>${activeMarket}</b> | Prediction: <b>${activePrediction}</b> | Stake: <b>$${currentStake.toFixed(2)}</b>`);
 
-        // Checked API Parameters structure for strict Digit Differs alignment
         ws.send(JSON.stringify({
             proposal: 1,
             amount: currentStake,
@@ -179,7 +178,7 @@
             currency: "USD",
             duration: 1,
             duration_unit: "t",
-            barrier: String(activePrediction), // Strict text parameter formatting validation
+            barrier: String(activePrediction), 
             symbol: activeMarket
         }));
     }
@@ -200,7 +199,7 @@
         }
 
         updateUI();
-        executeNextTradeLoop(); // Zero delay chain execution
+        executeNextTradeLoop(); 
     }
 
     function stopBotForce(reason) {
