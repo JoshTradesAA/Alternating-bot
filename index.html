@@ -50,9 +50,8 @@
     ];
     let marketIndex = 0;
 
-    // Hardcoded numbers to eliminate any potential markdown translation bugs
-    const predSequence = [3, 4, 5, 6, 7];
-    let predIndex = 0;
+    // Completely bulletproof string mapping to eliminate chat parser glitches
+    let currentDigit = 3;
 
     const baseStake = 1.0;
     let currentStake = 1.0;
@@ -67,7 +66,7 @@
 
     function updateUI() {
         document.getElementById('statMarket').innerText = sMarkets[marketIndex];
-        document.getElementById('statPred').innerText = predSequence[predIndex];
+        document.getElementById('statPred').innerText = currentDigit;
         document.getElementById('statStake').innerText = currentStake.toFixed(2);
         document.getElementById('statProfit').innerText = totalProfit.toFixed(2);
         document.getElementById('statProfit').style.color = totalProfit >= 0 ? "green" : "red";
@@ -84,7 +83,7 @@
 
         isRunning = true;
         marketIndex = 0;
-        predIndex = 0;
+        currentDigit = 3;
         currentStake = baseStake;
         totalProfit = 0.0;
         processedContracts = [];
@@ -163,9 +162,8 @@
         if (!isRunning) return;
         
         const activeMarket = sMarkets[marketIndex];
-        const activePrediction = predSequence[predIndex];
         
-        addLog("Sending Proposal -> <b>" + activeMarket + "</b> | Prediction: <b>" + activePrediction + "</b> | Stake: <b>$" + currentStake.toFixed(2) + "</b>");
+        addLog("Sending Proposal -> <b>" + activeMarket + "</b> | Prediction: <b>" + currentDigit + "</b> | Stake: <b>$" + currentStake.toFixed(2) + "</b>");
 
         ws.send(JSON.stringify({
             proposal: 1,
@@ -175,7 +173,7 @@
             currency: "USD",
             duration: 1,
             duration_unit: "t",
-            barrier: String(activePrediction), 
+            barrier: String(currentDigit), 
             symbol: activeMarket
         }));
     }
@@ -183,15 +181,17 @@
     function rotateParameters() {
         if (!isRunning) return;
 
+        // 1. Shift Market Pointer
         marketIndex++;
         if (marketIndex >= sMarkets.length) {
             marketIndex = 0;
             addLog("Finished Volatility 300 (1s). Looping back to Volatility 10 (1s)...");
         }
 
-        predIndex++;
-        if (predIndex >= predSequence.length) {
-            predIndex = 0;
+        // 2. Clear Mathematical Digit Cycle Rotation
+        currentDigit++;
+        if (currentDigit > 7) {
+            currentDigit = 3;
             addLog("Prediction cycle completed. Resetting digit target back to 3.");
         }
 
