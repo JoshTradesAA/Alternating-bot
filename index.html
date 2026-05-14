@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1s Chronological Alternating Digit Differs Bot</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f4f9; padding: 20px; color: #333; }
+        .container { max-width: 600px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: 0 auto; }
+        h2 { text-align: center; color: #e31c25; }
+        input, button { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { background: #e31c25; color: white; border: none; font-weight: bold; cursor: pointer; }
+        button:hover { background: #b8121a; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; background: #eee; padding: 10px; border-radius: 4px; }
+        .stat-box { font-size: 14px; font-weight: bold; }
+        .logs { background: #222; color: #0f0; padding: 15px; border-radius: 4px; height: 250px; overflow-y: auto; font-family: monospace; font-size: 13px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Deriv 1s Alternating Bot</h2>
+    
+    <label>Deriv API Token:</label>
+    <input type="password" id="token" placeholder="Paste your free Virtual Account Token here">
+    
+    <div class="stats-grid">
+        <div class="stat-box">Active Market: <span id="statMarket">1HZ10V</span></div>
+        <div class="stat-box">Current Prediction: <span id="statPred">3</span></div>
+        <div class="stat-box">Current Stake: $<span id="statStake">1.00</span></div>
+        <div class="stat-box">Total Profit/Loss: $<span id="statProfit">0.00</span></div>
+        <div class="stat-box">Target Profit: $6.00</div>
+    </div>
+
+    <button id="startBtn" onclick="startBot()">START TRADING</button>
+    
+    <h3>Activity Logs:</h3>
+    <div class="logs" id="logPanel">> Bot initialized. Ready to loop all (1s) Indices chronologically.</div>
+</div>
+
+<script>
+    let ws;
+    let isRunning = false;
+
+    // Chronological Array of all 1s Volatility Indices
+    const 1sMarkets = [
+        "1HZ10V",  // Volatility 10 (1s)
+        "1HZ15V",  // Volatility 15 (1s)
+        "1HZ25V",  // Volatility 25 (1s)
+        "1HZ30V",  // Volatility 30 (1s)
+        "1HZ50V",  // Volatility 50 (1s)
+        "1HZ75V",  // Volatility 75 (1s)
+        "1HZ90V",  // Volatility 90 (1s)
+        "1HZ100V", // Volatility 100 (1s)
+        "1HZ150V", // Volatility 150 (1s)
+        "1HZ200V", // Volatility 200 (1s)
+        "1HZ250V", // Volatility 250 (1s)
+        "1HZ300V"  // Volatility 300 (1s)
+    ];
+    let marketIndex = 0;
+
+    // Target digit selection parameters
+    const predSequence = [3, 4, 5, 6, 7];
+    let predIndex = 0;
+
+    // Financial calculations parameters
+    const baseStake = 1.0;
+    let currentStake = 1.0;
+    let totalProfit = 0.0;
+    const targetProfit = 6.0;
+
+    function addLog(message) {
+        const panel = document.getElementById('logPanel');
+        panel.innerHTML += `<br>> ${message}`;
+        panel.scrollTop = panel.scrollHeight;
+    }
+
+    function updateUI() {
+        document.getElementById('statMarket').innerText = 1sMarkets[marketIndex];
+        document.getElementById('statPred').innerText = predSequence[predIndex];
+        document.getElementById('statStake').innerText = currentStake.toFixed(2);
+        document.getElementById('statProfit').innerText = totalProfit.toFixed(2);
+        document.getElementById('statProfit').style.color = totalProfit >= 0 ? "green" : "red";
+    }
+
+    function startBot() {
+        if (isRunning) {
+            stopBotForce("Bot manually stopped by user.");
+            return;
+        }
+
+        const token = document.getElementById('token').value;
+        if (!token) { addLog("ERROR: Please enter an API Token."); return; }
+
+        isRunning = true;
+        marketIndex = 0;
+        predIndex = 0;
+        currentStake = baseStake;
+        totalProfit = 0.0;
+        
+        document.getElementById('startBtn').innerText = "STOP BOT";
+        updateUI();
+        connectToDeriv(token);
+    }
+
+    function connectToDeriv(token) {
+        ws = new WebSocket('wss://://derivws.com');
+
+        ws.onopen = function() {
+            addLog("Opening private connection stream to Deriv...");
+            ws.send(JSON.stringify({ authorize: token }));
+        };
+
+        ws.onmessage = function(msg) {
+            const data = JSON.parse(msg.data);
+            
+            if (data.error) {
+                addLog(`API ERROR: ${data.error.message}`);
+                stopBotForce("Execution stopped due to backend error.");
+                return;
+            }
+
+            if (data.msg_type === 'authorize') {
+                addLog(`Authorized. Ready to stream trades.`);
+                ws.send(JSON.stringify({ forget_all: "proposal_open_contract" }));
+                ws.send(JSON.stringify({ proposal_open_contract: 1, subscribe: 1 }));
+                executeNextTradeLoop();
+            }
+
+            if (data.msg_type === 'proposal') {
+                if (!isRunning) return;
+                ws.send(JSON.stringify({ buy: data.proposal.id, price: data.proposal.ask_price }));
+            }
+
+            if (data.msg_type === 'buy') {
+                addLog(`Order placed successfully. Waiting for final digit validation...`);
+            }
+
+            if (data.msg_type === 'proposal_open_contract' && data.proposal_open_contract) {
+                const contract = data.proposal_open_contract;
+                
+                if (contract.is_expired && contract.status !== 'open') {
+                    const winAmount = parseFloat(contract.profit);
+                    totalProfit += winAmount;
+                    
+                    if (winAmount > 0) {
+                        addLog(`<span style="color: #0f0;">WIN! Return: +$${winAmount.toFixed(2)}</span>`);
+                        currentStake = baseStake; 
+                    } else {
+                        addLog(`<span style="color: #ff3333;">LOSS! Deficit: $${winAmount.toFixed(2)}</span>`);
+                        currentStake = currentStake * 11; 
+                    }
+
+                    updateUI();
+
+                    if (totalProfit >= targetProfit) {
+                        stopBotForce(`GOAL ACHIEVED! Final Net Profit: $${totalProfit.toFixed(2)}`);
+                        return;
+                    }
+
+                    rotateParameters();
+                }
+            }
+        };
+    }
+
+    function executeNextTradeLoop() {
+        if (!isRunning) return;
+        
+        const activeMarket = 1sMarkets[marketIndex];
+        const activePrediction = predSequence[predIndex];
+        
+        addLog(`Sending Proposal -> <b>${activeMarket}</b> | Prediction: <b>${activePrediction}</b> | Stake: <b>$${currentStake.toFixed(2)}</b>`);
+
+        ws.send(JSON.stringify({
+            proposal: 1,
+            amount: currentStake,
+            basis: "stake",
+            category: "digits",
+            contract_type: "DIGITDIFF",
+            currency: "USD",
+            duration: 1,
+            duration_unit: "t",
+            barrier: activePrediction,
+            symbol: activeMarket
+        }));
+    }
+
+    function rotateParameters() {
+        if (!isRunning) return;
+
+        // Advance to next chronological market
+        marketIndex++;
+        if (marketIndex >= 1sMarkets.length) {
+            marketIndex = 0;
+            addLog("Finished Volatility 300 (1s). Looping back to Volatility 10 (1s)...");
+        }
+
+        // Advance prediction sequence
+        predIndex++;
+        if (predIndex >= predSequence.length) {
+            predIndex = 0;
+            addLog("Prediction cycle completed. Resetting digit target back to 3.");
+        }
+
+        updateUI();
+        
+        setTimeout(() => {
+            executeNextTradeLoop();
+        }, 1500);
+    }
+
+    function stopBotForce(reason) {
+        isRunning = false;
+        document.getElementById('startBtn').innerText = "START TRADING";
+        addLog(`<b>SYSTEM STATUS: ${reason}</b>`);
+        if(ws) {
+            ws.send(JSON.stringify({ forget_all: "proposal_open_contract" }));
+            ws.close();
+        }
+    }
+</script>
+</body>
+</html>
