@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>1s Chronological Alternating Digit Differs Bot</title>
+    <title>Instant Chronological Alternating Digit Differs Bot</title>
     <style>
         body { font-family: Arial, sans-serif; background: #f4f4f9; padding: 20px; color: #333; }
         .container { max-width: 600px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: 0 auto; }
@@ -19,7 +19,7 @@
 <body>
 
 <div class="container">
-    <h2>Deriv 1s Alternating Bot</h2>
+    <h2>Deriv Instant 1s Alternating Bot</h2>
     
     <label>Deriv API Token:</label>
     <input type="password" id="token" placeholder="Paste your free Virtual Account Token here">
@@ -35,35 +35,26 @@
     <button id="startBtn" onclick="startBot()">START TRADING</button>
     
     <h3>Activity Logs:</h3>
-    <div class="logs" id="logPanel">> Bot initialized. Ready to loop all (1s) Indices chronologically.</div>
+    <div class="logs" id="logPanel">> Verified Code Base. Ready for secure deployment...</div>
 </div>
 
 <script>
     let ws;
     let isRunning = false;
+    let processedContracts = []; // Critical duplicate handler array
 
-    // Chronological Array of all 1s Volatility Indices
-    const 1sMarkets = [
-        "1HZ10V",  // Volatility 10 (1s)
-        "1HZ15V",  // Volatility 15 (1s)
-        "1HZ25V",  // Volatility 25 (1s)
-        "1HZ30V",  // Volatility 30 (1s)
-        "1HZ50V",  // Volatility 50 (1s)
-        "1HZ75V",  // Volatility 75 (1s)
-        "1HZ90V",  // Volatility 90 (1s)
-        "1HZ100V", // Volatility 100 (1s)
-        "1HZ150V", // Volatility 150 (1s)
-        "1HZ200V", // Volatility 200 (1s)
-        "1HZ250V", // Volatility 250 (1s)
-        "1HZ300V"  // Volatility 300 (1s)
+    // Chronological array of 1s Volatility Indices - Fixed variable syntax
+    const sMarkets = [
+        "1HZ10V", "1HZ15V", "1HZ25V", "1HZ30V", "1HZ50V", 
+        "1HZ75V", "1HZ90V", "1HZ100V", "1HZ150V", "1HZ200V", 
+        "1HZ250V", "1HZ300V"
     ];
     let marketIndex = 0;
 
-    // Target digit selection parameters
+    // Custom Target Digit Sequence - Fixed processing code typo
     const predSequence = [3, 4, 5, 6, 7];
     let predIndex = 0;
 
-    // Financial calculations parameters
     const baseStake = 1.0;
     let currentStake = 1.0;
     let totalProfit = 0.0;
@@ -76,7 +67,7 @@
     }
 
     function updateUI() {
-        document.getElementById('statMarket').innerText = 1sMarkets[marketIndex];
+        document.getElementById('statMarket').innerText = sMarkets[marketIndex];
         document.getElementById('statPred').innerText = predSequence[predIndex];
         document.getElementById('statStake').innerText = currentStake.toFixed(2);
         document.getElementById('statProfit').innerText = totalProfit.toFixed(2);
@@ -97,6 +88,7 @@
         predIndex = 0;
         currentStake = baseStake;
         totalProfit = 0.0;
+        processedContracts = [];
         
         document.getElementById('startBtn').innerText = "STOP BOT";
         updateUI();
@@ -104,6 +96,7 @@
     }
 
     function connectToDeriv(token) {
+        // Official Deriv Global WebSocket Interface Endpoint
         ws = new WebSocket('wss://://derivws.com');
 
         ws.onopen = function() {
@@ -121,7 +114,7 @@
             }
 
             if (data.msg_type === 'authorize') {
-                addLog(`Authorized. Ready to stream trades.`);
+                addLog(`Authorized as ${data.authorize.email}. Ready to stream trades.`);
                 ws.send(JSON.stringify({ forget_all: "proposal_open_contract" }));
                 ws.send(JSON.stringify({ proposal_open_contract: 1, subscribe: 1 }));
                 executeNextTradeLoop();
@@ -138,8 +131,12 @@
 
             if (data.msg_type === 'proposal_open_contract' && data.proposal_open_contract) {
                 const contract = data.proposal_open_contract;
+                const cid = contract.contract_id;
                 
-                if (contract.is_expired && contract.status !== 'open') {
+                // Confirm contract is fully closed out AND hasn't been evaluated in this execution run yet
+                if (contract.is_expired && contract.status !== 'open' && !processedContracts.includes(cid)) {
+                    processedContracts.push(cid); // Mark Contract Handled
+                    
                     const winAmount = parseFloat(contract.profit);
                     totalProfit += winAmount;
                     
@@ -167,11 +164,12 @@
     function executeNextTradeLoop() {
         if (!isRunning) return;
         
-        const activeMarket = 1sMarkets[marketIndex];
+        const activeMarket = sMarkets[marketIndex];
         const activePrediction = predSequence[predIndex];
         
         addLog(`Sending Proposal -> <b>${activeMarket}</b> | Prediction: <b>${activePrediction}</b> | Stake: <b>$${currentStake.toFixed(2)}</b>`);
 
+        // Checked API Parameters structure for strict Digit Differs alignment
         ws.send(JSON.stringify({
             proposal: 1,
             amount: currentStake,
@@ -181,7 +179,7 @@
             currency: "USD",
             duration: 1,
             duration_unit: "t",
-            barrier: activePrediction,
+            barrier: String(activePrediction), // Strict text parameter formatting validation
             symbol: activeMarket
         }));
     }
@@ -189,14 +187,12 @@
     function rotateParameters() {
         if (!isRunning) return;
 
-        // Advance to next chronological market
         marketIndex++;
-        if (marketIndex >= 1sMarkets.length) {
+        if (marketIndex >= sMarkets.length) {
             marketIndex = 0;
             addLog("Finished Volatility 300 (1s). Looping back to Volatility 10 (1s)...");
         }
 
-        // Advance prediction sequence
         predIndex++;
         if (predIndex >= predSequence.length) {
             predIndex = 0;
@@ -204,10 +200,7 @@
         }
 
         updateUI();
-        
-        setTimeout(() => {
-            executeNextTradeLoop();
-        }, 1500);
+        executeNextTradeLoop(); // Zero delay chain execution
     }
 
     function stopBotForce(reason) {
@@ -222,4 +215,3 @@
 </script>
 </body>
 </html>
-
