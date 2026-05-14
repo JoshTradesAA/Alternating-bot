@@ -35,7 +35,7 @@
     <button id="startBtn" onclick="startBot()">START TRADING</button>
     
     <h3>Activity Logs:</h3>
-    <div class="logs" id="logPanel">> Connection parameters verified. Ready to run.</div>
+    <div class="logs" id="logPanel">> Payload structures updated to production spec. Ready to execute.</div>
 </div>
 
 <script>
@@ -50,6 +50,7 @@
     ];
     let marketIndex = 0;
 
+    // RESTORED: Explicit array definition containing your structural digit cycle targets
     const predSequence = [3, 4, 5, 6, 7];
     let predIndex = 0;
 
@@ -94,8 +95,7 @@
     }
 
     function connectToDeriv(token) {
-        // Clean URL constructed via single strings to block copy-paste typos
-        const endpoint = "wss://" + "ws.derivws.com" + "/websockets/v3?app_id=1089";
+        const endpoint = "wss://" + "://derivws.com" + "/websockets/v3?app_id=1089";
         ws = new WebSocket(endpoint);
 
         ws.onopen = function() {
@@ -167,11 +167,11 @@
         
         addLog(`Sending Proposal -> <b>${activeMarket}</b> | Prediction: <b>${activePrediction}</b> | Stake: <b>$${currentStake.toFixed(2)}</b>`);
 
+        // FIXED CRITICAL VALIDATION: Completely eliminated the rejected 'category' key property
         ws.send(JSON.stringify({
             proposal: 1,
             amount: currentStake,
             basis: "stake",
-            category: "digits",
             contract_type: "DIGITDIFF",
             currency: "USD",
             duration: 1,
